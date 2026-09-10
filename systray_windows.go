@@ -264,12 +264,19 @@ func (t *winTray) setIcon(src string) error {
 		return ErrTrayNotReadyYet
 	}
 
-	const NIF_ICON = 0x00000002
-
 	h, err := t.loadIconFrom(src)
 	if err != nil {
 		return err
 	}
+	return t.setIconHandle(h)
+}
+
+// A null handle clears the picture while retaining the notification slot.
+func (t *winTray) setIconHandle(h Handle) error {
+	if !t.isReady() {
+		return ErrTrayNotReadyYet
+	}
+	const NIF_ICON = 0x00000002
 
 	t.muNID.Lock()
 	defer t.muNID.Unlock()
@@ -998,6 +1005,13 @@ func SetIcon(iconBytes []byte) {
 		log.Printf("systray error: unable to set icon: %s\n", err)
 		return
 	}
+}
+
+// ClearIcon clears the Windows notification picture without removing the item.
+// Store the null handle in nid so tooltip updates and TaskbarCreated cannot
+// inadvertently restore the previous picture. SetIcon restores a visible icon.
+func ClearIcon() error {
+	return wt.setIconHandle(0)
 }
 
 // SetTemplateIcon sets the systray icon as a template icon (on macOS), falling back
